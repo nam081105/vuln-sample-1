@@ -11,6 +11,30 @@ from pydantic import BaseModel
 app = FastAPI(title="Internal HR Directory API", version="1.0.0")
 
 # ==========================================
+# PYDANTIC DTO MODELS (DATA TRANSFER OBJECTS)
+# ==========================================
+class EmployeePublicDTO(BaseModel):
+    """
+    DTO đại diện cho dữ liệu danh bạ công khai của nhân viên.
+    Chỉ chứa các trường an toàn cho phép hiển thị trên danh bạ nội bộ.
+    Loại bỏ hoàn toàn các trường nhạy cảm: salary, ssn, hashed_password, reset_token.
+    """
+    id: int
+    full_name: str
+    email: str
+    department: str
+    role: str
+
+    class Config:
+        from_attributes = True
+
+
+class EmployeeSearchResponseDTO(BaseModel):
+    """DTO cho kết quả tìm kiếm danh bạ nhân viên."""
+    total: int
+    employees: List[EmployeePublicDTO]
+
+# ==========================================
 # CƠ SỞ DỮ LIỆU GIẢ LẬP (Mô hình ORM / Domain Entity)
 # ==========================================
 class UserEntity:
@@ -61,7 +85,11 @@ FAKE_DATABASE: List[UserEntity] = [
 # API ENDPOINTS
 # ==========================================
 
-@app.get("/api/v1/employees/search")
+@app.get(
+    "/api/v1/employees/search",
+    response_model=EmployeeSearchResponseDTO,
+    summary="Tìm kiếm danh bạ nhân viên"
+)
 def search_employees(keyword: str = Query(..., description="Từ khóa tìm kiếm theo tên hoặc phòng ban")):
     """
     Tìm kiếm nhân viên trong danh bạ công ty theo từ khóa.
@@ -74,7 +102,11 @@ def search_employees(keyword: str = Query(..., description="Từ khóa tìm ki�
     return {"total": len(results), "employees": results}
 
 
-@app.get("/api/v1/employees/{employee_id}")
+@app.get(
+    "/api/v1/employees/{employee_id}",
+    response_model=EmployeePublicDTO,
+    summary="Xem chi tiết thông tin nhân viên"
+)
 def get_employee_detail(employee_id: int):
     """
     Lấy thông tin chi tiết của một nhân viên theo ID.
@@ -83,3 +115,4 @@ def get_employee_detail(employee_id: int):
     if not user:
         raise HTTPException(status_code=404, detail="Không tìm thấy nhân viên")
     return user
+
